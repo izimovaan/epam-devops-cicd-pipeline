@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+
+    environment {
+        docker_image = "izimova/jenkins-nodejs-build"
+    }
+
+    stages {
+        stage('activity 1: checkout') {
+            steps {
+                // pull forked code from github
+                checkout scm
+            }
+        }
+
+        stage('activity 2: build') {
+            steps {
+                echo 'building app'
+                sh 'chmod +x scripts/build.sh'
+                sh './scripts/build.sh'
+            }
+        }
+
+        stage('activity 3: test') {
+            steps {
+                echo 'running tests'
+                sh 'chmod +x scripts/test.sh'
+                sh './scripts/test.sh'
+            }
+        }
+
+        stage('activity 4: build docker image') {
+            steps {
+                script {
+                    // build final image
+                    app = docker.build("${docker_image}")
+                }
+            }
+        }
+
+        stage('activity 5: push docker image') {
+            steps {
+                script {
+                    // push to registry
+                    docker.withRegistry('https://registry.hub.docker.com', 'docker_hub_creds_id') {
+                        app.push("${env.BUILD_NUMBER}")
+                        app.push("latest")
+                    }
+                }
+            }
+        }
+    }
+}
